@@ -80,12 +80,12 @@ class Interactable {
   }
 }
 
-new Interactable('ROTATE', 'brown').addRotate();
-new Interactable('PINCH', 'orange').addPinch();
-new Interactable('SWIVEL', 'yellow').addSwivel(false);
-new Interactable('PAN', 'green').addPan();
-new Interactable('TAP', 'blue').addTap();
-new Interactable('ALL', 'purple')
+new Interactable('TAP',    'crimson').addTap();
+new Interactable('SWIVEL', 'orange').addSwivel(false);
+new Interactable('PAN',    'yellow').addPan();
+new Interactable('PINCH',  'green' ).addPinch();
+new Interactable('ROTATE', 'blue'  ).addRotate();
+new Interactable('ALL',    'purple')
   .addTap()
   .addPan()
   .addPinch()
