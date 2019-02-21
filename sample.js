@@ -4,7 +4,7 @@ const region = new westures.Region(window);
 const container = document.querySelector('#container');
 
 const SIXTY_FPS = 1000 / 60;
-const FRICTION = 0.95;
+const FRICTION = 0.965;
 const MULTI = 2;
 const LIMIT = 0.1;
 
