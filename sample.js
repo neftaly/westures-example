@@ -4,9 +4,10 @@ const region = new westures.Region(window);
 const container = document.querySelector('#container');
 
 const SIXTY_FPS = 1000 / 60;
-const FRICTION = 0.965;
-const MULTI = 2;
+const FRICTION = 0.95;
+const MULTI = 7;
 const LIMIT = 0.1;
+const MAX_V = 7;
 
 function random8Bit() {
   return Math.floor(Math.random() * 256);
@@ -79,9 +80,9 @@ class Interactable {
     region.addGesture(this.element,
       new westures.Swipe(),
       (data) => {
-        this.rotation = data.direction;
-        this.velocityX = data.velocity * Math.cos(data.direction) * MULTI;
-        this.velocityY = data.velocity * Math.sin(data.direction) * MULTI;
+        const velocity = data.velocity > MAX_V ? MAX_V : data.velocity;
+        this.velocityX = velocity * Math.cos(data.direction) * MULTI;
+        this.velocityY = velocity * Math.sin(data.direction) * MULTI;
         this.swipe_interval = setInterval(this.animate_swipe, SIXTY_FPS); 
       });
     region.addGesture(this.element,
@@ -126,12 +127,14 @@ new Interactable('PAN',    'gold').addPan();
 new Interactable('PINCH',  'green').addPinch();
 new Interactable('ROTATE', 'dodgerblue').addRotate();
 new Interactable('SWIPE',  'darkorchid').addSwipe();
+// new Interactable('PAN and SWIPE', 'silver').addPan().addSwipe();
 new Interactable(
-  'TAP, PAN, PINCH, and ROTATE\n(desktop: CTRL to SWIVEL)', 
+  'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
   'yellowgreen'
 ).addTap()
   .addPan()
   .addPinch()
   .addRotate()
+  .addSwipe()
   .addSwivel(true);
 
