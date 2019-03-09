@@ -22,6 +22,7 @@ class Interactable {
   constructor(name, color) {
     this.element = document.createElement('div');
     this.element.style.backgroundColor = color;
+
     this.label = document.createElement('h1');
     this.label.innerText = name;
 
@@ -49,12 +50,16 @@ class Interactable {
     setInterval(() => this.update(), SIXTY_FPS);
   }
 
-  addTap() {
-    region.addGesture(this.element, new westures.Tap(), (data) => {
-      const R = random8Bit();
-      const G = random8Bit();
-      const B = random8Bit();
-      this.element.style.backgroundColor = `rgb(${R}, ${G}, ${B})`;
+  randomBackground() {
+    const R = random8Bit();
+    const G = random8Bit();
+    const B = random8Bit();
+    this.element.style.backgroundColor = `rgb(${R}, ${G}, ${B})`;
+  }
+
+  addTap(options) {
+    region.addGesture(this.element, new westures.Tap(options), (data) => {
+      this.randomBackground();
     });
     return this;
   }
@@ -121,20 +126,34 @@ class Interactable {
   }
 }
 
+// Basic gestures
 new Interactable('TAP',    'crimson').addTap();
 new Interactable('SWIVEL', 'darkorange').addSwivel(false);
 new Interactable('PAN',    'gold').addPan();
 new Interactable('PINCH',  'green').addPinch();
 new Interactable('ROTATE', 'dodgerblue').addRotate();
 new Interactable('SWIPE',  'darkorchid').addSwipe();
-// new Interactable('PAN and SWIPE', 'silver').addPan().addSwipe();
+
+// Mix and match!
+new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
-  'yellowgreen'
+  'olivedrab'
 ).addTap()
   .addPan()
   .addPinch()
   .addRotate()
   .addSwipe()
   .addSwivel(true);
+new Interactable('SLOW TAP',      'yellowgreen').addTap({ 
+  minDelay: 300,
+  maxDelay: 1000,
+});
+new Interactable('DOUBLE TAP',    'limegreen').addTap({ 
+  numInputs: 2 
+});
+new Interactable('FIVE TAP',      'greenyellow').addTap({ 
+  maxDelay: 1000,
+  numInputs: 5.
+});
 
