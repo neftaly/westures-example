@@ -36,6 +36,7 @@ class Interactable {
     this.velocityX = 0;
     this.velocityY = 0;
 
+    this.update_interval = null;
     this.swipe_interval = null;
     this.animate_swipe = () => {
       this.x += this.velocityX;
@@ -45,9 +46,26 @@ class Interactable {
       if (this.velocityY === 0 && this.velocityX === 0) {
         clearInterval(this.swipe_interval);
       }
+      this.update();
     };
 
-    setInterval(() => this.update(), SIXTY_FPS);
+    this.setupTracking();
+  }
+
+  setupTracking() {
+    region.addGesture(this.element,
+      new westures.Track(['start', 'end']),
+      (data) => {
+        switch (data.phase) {
+          case 'start':
+            this.update_interval = setInterval(() => this.update(), SIXTY_FPS);
+            clearInterval(this.swipe_interval);
+            break;
+          case 'end':
+            setTimeout(() => clearInterval(this.update_interval), 0);
+            break;
+        }
+      });
   }
 
   randomBackground() {
@@ -64,16 +82,16 @@ class Interactable {
     return this;
   }
 
-  addRotate() {
-    region.addGesture(this.element, new westures.Rotate(), (data) => {
+  addRotate(options) {
+    region.addGesture(this.element, new westures.Rotate(options), (data) => {
       this.rotation += data.delta;
     });
     return this;
   }
 
-  addPan() {
+  addPan(options) {
     region.addGesture(this.element,
-      new westures.Pan({ muteKey: 'ctrlKey' }), 
+      new westures.Pan(options), 
       (data) => {
         this.x += data.change.x;
         this.y += data.change.y;
@@ -81,29 +99,23 @@ class Interactable {
     return this;
   }
 
-  addSwipe() {
+  addSwipe(options) {
     region.addGesture(this.element,
-      new westures.Swipe(),
+      new westures.Swipe(options),
       (data) => {
         const velocity = data.velocity > MAX_V ? MAX_V : data.velocity;
         this.velocityX = velocity * Math.cos(data.direction) * MULTI;
         this.velocityY = velocity * Math.sin(data.direction) * MULTI;
         this.swipe_interval = setInterval(this.animate_swipe, SIXTY_FPS); 
       });
-    region.addGesture(this.element,
-      new westures.Track(['start']),
-      (data) => {
-        clearInterval(this.swipe_interval);
-      });
     return this;
   }
 
-  addSwivel(requireKey) {
-    const enableKey = requireKey ? 'ctrlKey' : null;
+  addSwivel(options) {
     region.addGesture(this.element, 
       new westures.Swivel({
         pivotCenter: this.element,
-        enableKey
+        ...options,
       }), 
       (data) => {
         this.rotation += data.delta;
@@ -111,8 +123,8 @@ class Interactable {
     return this;
   }
 
-  addPinch() {
-    region.addGesture(this.element, new westures.Pinch(), (data) => {
+  addPinch(options) {
+    region.addGesture(this.element, new westures.Pinch(options), (data) => {
       this.scale *= data.change;
     });
     return this;
@@ -128,7 +140,7 @@ class Interactable {
 
 // Basic gestures
 new Interactable('TAP',    'crimson').addTap();
-new Interactable('SWIVEL', 'darkorange').addSwivel(false);
+new Interactable('SWIVEL', 'darkorange').addSwivel();
 new Interactable('PAN',    'gold').addPan();
 new Interactable('PINCH',  'green').addPinch();
 new Interactable('ROTATE', 'dodgerblue').addRotate();
@@ -140,11 +152,11 @@ new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
   'olivedrab'
 ).addTap()
-  .addPan()
+  .addPan({ muteKey: 'ctrlKey' })
   .addPinch()
   .addRotate()
   .addSwipe()
-  .addSwivel(true);
+  .addSwivel({ enableKey: 'ctrlKey' });
 new Interactable('SLOW TAP',      'yellowgreen').addTap({ 
   minDelay: 300,
   maxDelay: 1000,
