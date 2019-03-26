@@ -84,7 +84,7 @@ class Interactable {
 
   addRotate(options) {
     region.addGesture(this.element, new westures.Rotate(options), (data) => {
-      this.rotation += data.delta;
+      this.rotation += data.rotation;
     });
     return this;
   }
@@ -93,8 +93,8 @@ class Interactable {
     region.addGesture(this.element,
       new westures.Pan(options), 
       (data) => {
-        this.x += data.change.x;
-        this.y += data.change.y;
+        this.x += data.translation.x;
+        this.y += data.translation.y;
       });
     return this;
   }
@@ -118,14 +118,14 @@ class Interactable {
         ...options,
       }), 
       (data) => {
-        this.rotation += data.delta;
+        this.rotation += data.rotation;
       });
     return this;
   }
 
   addPinch(options) {
     region.addGesture(this.element, new westures.Pinch(options), (data) => {
-      this.scale *= data.change;
+      this.scale *= data.scale;
     });
     return this;
   }
@@ -147,7 +147,7 @@ new Interactable('ROTATE', 'dodgerblue').addRotate();
 new Interactable('SWIPE',  'darkorchid').addSwipe();
 
 // Mix and match!
-new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
+// new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
   'olivedrab'

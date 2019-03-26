@@ -9,7 +9,7 @@
 
 'use strict';
 
-const { Gesture, Point2D, Region } = require('westures-core');
+const { Gesture, Point2D, Region, Smoothable } = require('westures-core');
 
 const Pan     = require('./src/Pan.js');
 const Pinch   = require('./src/Pinch.js');
@@ -23,6 +23,7 @@ module.exports = {
   Gesture,
   Point2D,
   Region,
+  Smoothable,
   Pan,
   Pinch,
   Rotate,
@@ -74,21 +75,36 @@ module.exports = {
  */
 
 /**
+ * Allows the enabling of smoothing on Gestures that use this mixin.
+ *
+ * @see {@link
+ * https://mvanderkamp.github.io/westures-core/westures-core.Smoothable.html|
+ * westures-core.Smoothable}
+ *
+ * @mixin Smoothable
+ * @memberof westures
+ */
+
+/**
  * The base data that is included for all emitted gestures.
  *
  * @typedef {Object} BaseData
  *
+ * @property {westures-core.Point2D} centroid - The centroid of the input
+ * points.
  * @property {Event} event - The input event which caused the gesture to be
- *    recognized.
+ * recognized.
  * @property {string} phase - 'start', 'move', or 'end'.
+ * @property {number} radius - The distance of the furthest input to the
+ * centroid.
  * @property {string} type - The name of the gesture as specified by its
- *    designer.
+ * designer.
  * @property {Element} target - The bound target of the gesture.
  *
  * @memberof ReturnTypes
  */
 
-},{"./src/Pan.js":11,"./src/Pinch.js":12,"./src/Rotate.js":13,"./src/Swipe.js":14,"./src/Swivel.js":15,"./src/Tap.js":16,"./src/Track.js":17,"westures-core":2}],2:[function(require,module,exports){
+},{"./src/Pan.js":12,"./src/Pinch.js":13,"./src/Rotate.js":14,"./src/Swipe.js":15,"./src/Swivel.js":16,"./src/Tap.js":17,"./src/Track.js":18,"westures-core":2}],2:[function(require,module,exports){
 /**
  * The global API interface for Westures. Exposes a constructor for the
  * {@link Region} and the generic {@link Gesture} class for user gestures to
@@ -99,18 +115,20 @@ module.exports = {
 
 'use strict';
 
-const Region  = require('./src/Region.js');
-const Point2D = require('./src/Point2D.js');
 const Gesture = require('./src/Gesture.js');
+const Point2D = require('./src/Point2D.js');
+const Region = require('./src/Region.js');
+const Smoothable = require('./src/Smoothable.js');
 
 module.exports = {
   Gesture,
   Point2D,
   Region,
+  Smoothable,
 };
 
 
-},{"./src/Gesture.js":4,"./src/Point2D.js":7,"./src/Region.js":9}],3:[function(require,module,exports){
+},{"./src/Gesture.js":4,"./src/Point2D.js":7,"./src/Region.js":9,"./src/Smoothable.js":10}],3:[function(require,module,exports){
 /*
  * Contains the Binding class.
  */
@@ -171,11 +189,15 @@ class Binding {
   evaluateHook(hook, state) {
     const data = this.gesture[hook](state);
     if (data) {
-      data.phase = hook;
-      data.event = state.event;
-      data.type = this.gesture.type;
-      data.target = this.element;
-      this.handler(data);
+      this.handler({
+        centroid: state.centroid,
+        event:    state.event,
+        phase:    hook,
+        radius:   state.radius,
+        type:     this.gesture.type,
+        target:   this.element,
+        ...data,
+      });
     }
   }
 }
@@ -618,14 +640,14 @@ class Point2D {
   }
 
   /**
-   * Calculates the midpoint of a list of points.
+   * Calculates the centroid of a list of points.
    *
    * @param {westures-core.Point2D[]} points - The array of Point2D objects for
-   *    which to calculate the midpoint
+   * which to calculate the centroid.
    *
-   * @return {westures-core.Point2D} The midpoint of the provided points.
+   * @return {westures-core.Point2D} The centroid of the provided points.
    */
-  static midpoint(points = []) {
+  static centroid(points = []) {
     if (points.length === 0) return null;
 
     const total = Point2D.sum(points);
@@ -856,7 +878,7 @@ class Region {
      * @private
      * @type {State}
      */
-    this.state = new State();
+    this.state = new State(this.element);
 
     // Begin operating immediately.
     this.activate();
@@ -909,7 +931,7 @@ class Region {
     ['blur'].concat(CANCEL_EVENTS).forEach(eventname => {
       window.addEventListener(eventname, (e) => {
         e.preventDefault();
-        this.state = new State();
+        this.state = new State(this.element);
         this.resetActiveBindings();
       });
     });
@@ -1021,7 +1043,119 @@ class Region {
 module.exports = Region;
 
 
-},{"./Binding.js":3,"./PHASE.js":6,"./State.js":10}],10:[function(require,module,exports){
+},{"./Binding.js":3,"./PHASE.js":6,"./State.js":11}],10:[function(require,module,exports){
+/*
+ * Contains the abstract Pinch class.
+ */
+
+'use strict';
+
+const stagedEmit = Symbol('stagedEmit');
+const smooth = Symbol('smooth');
+
+/**
+ * A Smoothable gesture is one that emits on 'move' events. It provides a
+ * 'smoothing' option through its constructor, and will apply smoothing before
+ * emitting. There will be a tiny, ~1/60th of a second delay to emits, as well
+ * as a slight amount of drift over gestures sustained for a long period of
+ * time.
+ *
+ * For a gesture to make use of smoothing, it must return `this.emit(data,
+ * field)` from the `move` phase, instead of returning the data directly. If the
+ * data being smoothed is not a simple number, it must also override the
+ * `smoothingAverage(a, b)` method. Also you will probably want to call
+ * `super.restart()` at some point in the `start`, `end`, and `cancel` phases.
+ *
+ * @memberof westures-core
+ * @mixin
+ */
+const Smoothable = (superclass) => class Smoothable extends superclass {
+  /**
+   * @param {string} name - The name of the gesture.
+   * @param {Object} [options]
+   * @param {boolean} [options.smoothing=true] Whether to apply smoothing to
+   * emitted data.
+   */
+  constructor(name, options = {}) {
+    super(name, options);
+
+    /**
+     * The function through which emits are passed.
+     *
+     * @private
+     * @type {function}
+     */
+    this.emit = null;
+    if (options.hasOwnProperty('smoothing') && !options.smoothing) {
+      this.emit = data => data;
+    } else {
+      this.emit = this[smooth].bind(this);
+    }
+
+    /**
+     * Stage the emitted data once.
+     *
+     * @private
+     * @type {object}
+     */
+    this[stagedEmit] = null;
+  }
+
+  /**
+   * Restart the Smoothable gesture.
+   *
+   * @private
+   * @memberof module:westures-core.Smoothable
+   */
+  restart() {
+    this[stagedEmit] = null;
+  }
+
+  /**
+   * Smooth out the outgoing data.
+   *
+   * @private
+   * @memberof module:westures-core.Smoothable
+   *
+   * @param {object} next - The next batch of data to emit.
+   * @param {string] field - The field to which smoothing should be applied.
+   *
+   * @return {?object}
+   */
+  [smooth](next, field) {
+    let result = null;
+
+    if (this[stagedEmit]) {
+      result = this[stagedEmit];
+      const avg = this.smoothingAverage(result[field], next[field]);
+      result[field] = avg;
+      next[field] = avg;
+    }
+
+    this[stagedEmit] = next;
+    return result;
+  }
+
+  /**
+   * Average out two values, as part of the smoothing algorithm.
+   *
+   * @private
+   * @memberof module:westures-core.Smoothable
+   *
+   * @param {number} a
+   * @param {number} b
+   *
+   * @return {number} The average of 'a' and 'b'
+   */
+  smoothingAverage(a, b) {
+    return (a + b) / 2;
+  }
+};
+
+module.exports = Smoothable;
+
+
+},{}],11:[function(require,module,exports){
 /*
  * Contains the {@link State} class
  */
@@ -1070,7 +1204,15 @@ class State {
   /**
    * Constructor for the State class.
    */
-  constructor() {
+  constructor(element) {
+    /**
+     * Keep a reference to the element for the associated region.
+     *
+     * @private
+     * @type {Element}
+     */
+    this.element = element;
+
     /**
      * Keeps track of the current Input objects.
      *
@@ -1163,10 +1305,25 @@ class State {
    * @param {number} identifier - The identifier of the input to update.
    */
   updateInput(event, identifier) {
-    if (PHASE[event.type] === 'start') {
+    switch (PHASE[event.type]) {
+    case 'start':
       this[symbols.inputs].set(identifier, new Input(event, identifier));
-    } else if (this[symbols.inputs].has(identifier)) {
-      this[symbols.inputs].get(identifier).update(event);
+      try {
+        this.element.setPointerCapture(identifier);
+      } catch (e) { null; }
+      break;
+    case 'end':
+      try {
+        this.element.releasePointerCapture(identifier);
+      } catch (e) { null; }
+    case 'move':
+    case 'cancel':
+      if (this[symbols.inputs].has(identifier)) {
+        this[symbols.inputs].get(identifier).update(event);
+      }
+      break;
+    default:
+      console.warn(`Unrecognized event type: ${event.type}`);
     }
   }
 
@@ -1191,7 +1348,11 @@ class State {
     this.inputs = Array.from(this[symbols.inputs].values());
     this.active = this.getInputsNotInPhase('end');
     this.activePoints = this.active.map(i => i.current.point);
-    this.centroid = Point2D.midpoint(this.activePoints);
+    this.centroid = Point2D.centroid(this.activePoints);
+    this.radius = this.activePoints.reduce((acc, cur) => {
+      const dist = cur.distanceTo(this.centroid);
+      return dist > acc ? dist : acc;
+    }, 0);
     if (event) this.event = event;
   }
 }
@@ -1199,16 +1360,14 @@ class State {
 module.exports = State;
 
 
-},{"./Input.js":5,"./PHASE.js":6,"./Point2D.js":7}],11:[function(require,module,exports){
+},{"./Input.js":5,"./PHASE.js":6,"./Point2D.js":7}],12:[function(require,module,exports){
 /*
  * Contains the Pan class.
  */
 
 'use strict';
 
-const { Gesture } = require('westures-core');
-
-const REQUIRED_INPUTS = 1;
+const { Gesture, Point2D, Smoothable } = require('westures-core');
 
 /**
  * Data returned when a Pan is recognized.
@@ -1216,9 +1375,8 @@ const REQUIRED_INPUTS = 1;
  * @typedef {Object} PanData
  * @mixes ReturnTypes.BaseData
  *
- * @property {westures.Point2D} change - The change vector from the last emit.
- * @property {westures.Point2D} point - The centroid of the currently active
- *    points.
+ * @property {westures.Point2D} translation - The change vector from the last
+ * emit.
  *
  * @memberof ReturnTypes
  */
@@ -1227,10 +1385,11 @@ const REQUIRED_INPUTS = 1;
  * A Pan is defined as a normal movement in any direction.
  *
  * @extends westures.Gesture
+ * @mixes westures.Smoothable
  * @see ReturnTypes.PanData
  * @memberof westures
  */
-class Pan extends Gesture {
+class Pan extends Smoothable(Gesture) {
   /**
    * @param {Object} [options]
    * @param {string} [options.muteKey=undefined] - If this key is pressed, this
@@ -1238,7 +1397,8 @@ class Pan extends Gesture {
    *    'shiftKey', or 'metaKey'.
    */
   constructor(options = {}) {
-    super('pan');
+    super('pan', options);
+    const settings = { ...Pan.DEFAULTS, ...options };
 
     /**
      * Don't emit any data if this key is pressed.
@@ -1246,7 +1406,16 @@ class Pan extends Gesture {
      * @private
      * @type {string}
      */
-    this.muteKey = options.muteKey;
+    this.muteKey = settings.muteKey;
+
+    /**
+     * The minimum number of inputs that must be active for a Pinch to be
+     * recognized.
+     *
+     * @private
+     * @type {number}
+     */
+    this.minInputs = settings.minInputs;
 
     /**
      * The previous point location.
@@ -1255,14 +1424,6 @@ class Pan extends Gesture {
      * @type {module:westures.Point2D}
      */
     this.previous = null;
-
-    /**
-     * Stage the emitted data once.
-     *
-     * @private
-     * @type {ReturnTypes.RotateData}
-     */
-    this.stagedEmit = null;
   }
 
   /**
@@ -1273,10 +1434,10 @@ class Pan extends Gesture {
    * @param {State} state - The state object received by a hook.
    */
   restart(state) {
-    if (state.active.length >= REQUIRED_INPUTS) {
+    if (state.active.length >= this.minInputs) {
       this.previous = state.centroid;
     }
-    this.stagedEmit = null;
+    super.restart();
   }
 
   /**
@@ -1298,7 +1459,7 @@ class Pan extends Gesture {
    * otherwise not recognized.
    */
   move(state) {
-    if (state.active.length < REQUIRED_INPUTS) {
+    if (state.active.length < this.minInputs) {
       return null;
     }
 
@@ -1307,11 +1468,10 @@ class Pan extends Gesture {
       return null;
     }
 
-    const point = state.centroid;
-    const change = point.minus(this.previous);
+    const translation = state.centroid.minus(this.previous);
+    this.previous = state.centroid;
 
-    this.previous = point;
-    return { change, point };
+    return this.emit({ translation }, 'translation');
   }
 
   /**
@@ -1335,19 +1495,36 @@ class Pan extends Gesture {
   cancel(state) {
     this.restart(state);
   }
+
+  /*
+   * Averages out two points.
+   *
+   * @override
+   */
+  smoothingAverage(a, b) {
+    return new Point2D(
+      (a.x + b.x) / 2,
+      (a.y + b.y) / 2,
+    );
+  }
 }
+
+Pan.DEFAULTS = Object.freeze({
+  minInputs: 1,
+  smoothing: false,
+});
 
 module.exports = Pan;
 
 
-},{"westures-core":2}],12:[function(require,module,exports){
+},{"westures-core":2}],13:[function(require,module,exports){
 /*
  * Contains the abstract Pinch class.
  */
 
 'use strict';
 
-const { Gesture } = require('westures-core');
+const { Gesture, Smoothable } = require('westures-core');
 
 /**
  * Data returned when a Pinch is recognized.
@@ -1357,9 +1534,8 @@ const { Gesture } = require('westures-core');
  *
  * @property {number} distance - The average distance from an active input to
  *    the centroid.
- * @property {number} change - The change in distance since last emit.
- * @property {westures.Point2D} midpoint - The centroid of the currently active
- *    points.
+ * @property {number} scale - The proportional change in distance since last
+ * emit.
  *
  * @memberof ReturnTypes
  */
@@ -1368,19 +1544,18 @@ const { Gesture } = require('westures-core');
  * A Pinch is defined as two or more inputs moving either together or apart.
  *
  * @extends westures.Gesture
+ * @mixes westures.Smoothable
  * @see ReturnTypes.PinchData
  * @memberof westures
  */
-class Pinch extends Gesture {
+class Pinch extends Smoothable(Gesture) {
   /**
    * @param {Object} [options]
    * @param {number} [options.minInputs=2] The minimum number of inputs that
    * must be active for a Pinch to be recognized.
-   * @param {boolean} [options.smoothing=true] Whether to apply smoothing to
-   * emitted data.
    */
   constructor(options = {}) {
-    super('pinch');
+    super('pinch', options);
     const settings = { ...Pinch.DEFAULTS, ...options };
 
     /**
@@ -1393,33 +1568,12 @@ class Pinch extends Gesture {
     this.minInputs = settings.minInputs;
 
     /**
-     * The function through which emits are passed.
-     *
-     * @private
-     * @type {function}
-     */
-    this.emit = null;
-    if (settings.smoothing) {
-      this.emit = this.smooth.bind(this);
-    } else {
-      this.emit = data => data;
-    }
-
-    /**
      * The previous distance.
      *
      * @private
      * @type {number}
      */
     this.previous = 0;
-
-    /**
-     * Stage the emitted data once.
-     *
-     * @private
-     * @type {ReturnTypes.RotateData}
-     */
-    this.stagedEmit = null;
   }
 
   /**
@@ -1434,7 +1588,7 @@ class Pinch extends Gesture {
       const distance = state.centroid.averageDistanceTo(state.activePoints);
       this.previous = distance;
     }
-    this.stagedEmit = null;
+    super.restart();
   }
 
   /**
@@ -1456,12 +1610,11 @@ class Pinch extends Gesture {
   move(state) {
     if (state.active.length < this.minInputs) return null;
 
-    const midpoint = state.centroid;
-    const distance = midpoint.averageDistanceTo(state.activePoints);
-    const change = distance / this.previous;
+    const distance = state.centroid.averageDistanceTo(state.activePoints);
+    const scale = distance / this.previous;
 
     this.previous = distance;
-    return this.emit({ distance, midpoint, change });
+    return this.emit({ distance, scale }, 'scale');
   }
 
   /**
@@ -1483,28 +1636,6 @@ class Pinch extends Gesture {
   cancel(state) {
     this.restart(state);
   }
-
-  /**
-   * Smooth out the outgoing data.
-   *
-   * @private
-   * @param {ReturnTypes.PinchData} next
-   *
-   * @return {?ReturnTypes.PinchData}
-   */
-  smooth(next) {
-    let result = null;
-
-    if (this.stagedEmit) {
-      result = this.stagedEmit;
-      const avg = (result.change + next.change) / 2;
-      result.change = avg;
-      next.change = avg;
-    }
-
-    this.stagedEmit = next;
-    return result;
-  }
 }
 
 Pinch.DEFAULTS = Object.freeze({
@@ -1515,14 +1646,15 @@ Pinch.DEFAULTS = Object.freeze({
 module.exports = Pinch;
 
 
-},{"westures-core":2}],13:[function(require,module,exports){
+},{"westures-core":2}],14:[function(require,module,exports){
 /*
  * Contains the Rotate class.
  */
 
 'use strict';
 
-const { Gesture } = require('westures-core');
+const { Gesture, Smoothable } = require('westures-core');
+const angularMinus = require('./angularMinus.js');
 
 /**
  * Data returned when a Rotate is recognized.
@@ -1530,42 +1662,21 @@ const { Gesture } = require('westures-core');
  * @typedef {Object} RotateData
  * @mixes ReturnTypes.BaseData
  *
- * @property {number} delta - In radians, the change in angle since last emit.
- * @property {westures.Point2D} pivot - The centroid of the currently active
- *    points.
+ * @property {number} rotation - In radians, the change in angle since last
+ * emit.
  *
  * @memberof ReturnTypes
  */
-
-const PI2 = 2 * Math.PI;
-
-/**
- * Helper function to regulate angular differences, so they don't jump from 0 to
- * 2*PI or vice versa.
- *
- * @private
- * @param {number} a - Angle in radians.
- * @param {number} b - Angle in radians.
- * @return {number} c, given by: c = a - b such that || < PI
- */
-function angularMinus(a, b = 0) {
-  let diff = a - b;
-  if (diff < -Math.PI) {
-    diff += PI2;
-  } else if (diff > Math.PI) {
-    diff -= PI2;
-  }
-  return diff;
-}
 
 /**
  * A Rotate is defined as two inputs moving with a changing angle between them.
  *
  * @extends westures.Gesture
+ * @mixes westures.Smoothable
  * @see ReturnTypes.RotateData
  * @memberof westures
  */
-class Rotate extends Gesture {
+class Rotate extends Smoothable(Gesture) {
   /**
    * @param {Object} [options]
    * @param {number} [options.minInputs=2] The minimum number of inputs that
@@ -1574,7 +1685,7 @@ class Rotate extends Gesture {
    * emitted data.
    */
   constructor(options = {}) {
-    super('rotate');
+    super('rotate', options);
     const settings = { ...Rotate.DEFAULTS, ...options };
 
     /**
@@ -1587,33 +1698,12 @@ class Rotate extends Gesture {
     this.minInputs = settings.minInputs;
 
     /**
-     * The function through which emits are passed.
-     *
-     * @private
-     * @type {function}
-     */
-    this.emit = null;
-    if (settings.smoothing) {
-      this.emit = this.smooth.bind(this);
-    } else {
-      this.emit = data => data;
-    }
-
-    /**
      * Track the previously emitted rotation angle.
      *
      * @private
      * @type {number[]}
      */
     this.previousAngles = [];
-
-    /**
-     * Stage the emitted data once.
-     *
-     * @private
-     * @type {ReturnTypes.RotateData}
-     */
-    this.stagedEmit = null;
   }
 
   /**
@@ -1647,8 +1737,8 @@ class Rotate extends Gesture {
    */
   restart(state) {
     this.previousAngles = [];
-    this.stagedEmit = null;
     this.getAngle(state);
+    super.restart();
   }
 
   /**
@@ -1668,9 +1758,9 @@ class Rotate extends Gesture {
    * @return {?ReturnTypes.RotateData} <tt>null</tt> if this event did not occur
    */
   move(state) {
-    const delta = this.getAngle(state);
-    if (delta) {
-      return this.emit({ pivot: state.centroid, delta });
+    const rotation = this.getAngle(state);
+    if (rotation) {
+      return this.emit({ rotation }, 'rotation');
     }
     return null;
   }
@@ -1694,28 +1784,6 @@ class Rotate extends Gesture {
   cancel(state) {
     this.restart(state);
   }
-
-  /**
-   * Smooth out the outgoing data.
-   *
-   * @private
-   * @param {ReturnTypes.RotateData} next
-   *
-   * @return {?ReturnTypes.RotateData}
-   */
-  smooth(next) {
-    let result = null;
-
-    if (this.stagedEmit) {
-      result = this.stagedEmit;
-      const avg = (result.delta + next.delta) / 2;
-      result.delta = avg;
-      next.delta = avg;
-    }
-
-    this.stagedEmit = next;
-    return result;
-  }
 }
 
 Rotate.DEFAULTS = Object.freeze({
@@ -1726,7 +1794,7 @@ Rotate.DEFAULTS = Object.freeze({
 module.exports = Rotate;
 
 
-},{"westures-core":2}],14:[function(require,module,exports){
+},{"./angularMinus.js":19,"westures-core":2}],15:[function(require,module,exports){
 /*
  * Contains the Swipe class.
  */
@@ -1942,7 +2010,8 @@ class Swipe extends Gesture {
     const { point, time } = this.moves[vlim];
     const velocity = calc_velocity(this.moves, vlim);
     const direction = calc_angle(this.moves, vlim);
-    return { point, velocity, direction, time };
+    const centroid = point;
+    return { point, velocity, direction, time, centroid };
   }
 
   /**
@@ -1960,19 +2029,15 @@ class Swipe extends Gesture {
 module.exports = Swipe;
 
 
-},{"westures-core":2}],15:[function(require,module,exports){
+},{"westures-core":2}],16:[function(require,module,exports){
 /*
  * Contains the Rotate class.
  */
 
 'use strict';
 
-const { Gesture, Point2D } = require('westures-core');
-
-const REQUIRED_INPUTS = 1;
-const defaults = Object.freeze({
-  deadzoneRadius: 15,
-});
+const { Gesture, Point2D, Smoothable } = require('westures-core');
+const angularMinus = require('./angularMinus.js');
 
 /**
  * Data returned when a Swivel is recognized.
@@ -1980,9 +2045,9 @@ const defaults = Object.freeze({
  * @typedef {Object} SwivelData
  * @mixes ReturnTypes.BaseData
  *
- * @property {number} delta - In radians, the change in angle since last emit.
+ * @property {number} rotation - In radians, the change in angle since last
+ * emit.
  * @property {westures.Point2D} pivot - The pivot point.
- * @property {westures.Point2D} point - The current location of the input point.
  *
  * @memberof ReturnTypes
  */
@@ -1992,25 +2057,29 @@ const defaults = Object.freeze({
  * determined by the input's location at its 'start' phase.
  *
  * @extends westures.Gesture
+ * @mixes westures.Smoothable
  * @see ReturnTypes.SwivelData
  * @memberof westures
  */
-class Swivel extends Gesture {
+class Swivel extends Smoothable(Gesture) {
   /**
    * Constructor for the Swivel class.
    *
    * @param {Object} [options]
    * @param {number} [options.deadzoneRadius=10] - The radius in pixels around
-   *    the start point in which to do nothing.
-   * @param {string} [options.enableKey=undefined] - One of 'altKey', 'ctrlKey',
-   *    'metaKey', or 'shiftKey'. If set, gesture will only be recognized while
-   *    this key is down.
+   * the start point in which to do nothing.
+   * @param {string} [options.enableKey=null] - One of 'altKey', 'ctrlKey',
+   * 'metaKey', or 'shiftKey'. If set, gesture will only be recognized while
+   * this key is down.
+   * @param {number} [options.minInputs=1] - The minimum number of inputs that
+   * must be active for a Swivel to be recognized.
    * @param {Element} [options.pivotCenter] - If set, the swivel's pivot point
-   *    will be set to the center of the given pivotCenter element. Otherwise,
-   *    the pivot will be the location of the first contact point.
+   * will be set to the center of the given pivotCenter element. Otherwise, the
+   * pivot will be the location of the first contact point.
    */
   constructor(options = {}) {
-    super('swivel');
+    super('swivel', options);
+    const settings = { ...Swivel.DEFAULTS, ...options };
 
     /**
      * The radius around the start point in which to do nothing.
@@ -2018,7 +2087,7 @@ class Swivel extends Gesture {
      * @private
      * @type {number}
      */
-    this.deadzoneRadius = options.deadzoneRadius || defaults.deadzoneRadius;
+    this.deadzoneRadius = settings.deadzoneRadius;
 
     /**
      * If this is set, gesture will only respond to events where this property
@@ -2027,7 +2096,16 @@ class Swivel extends Gesture {
      * @private
      * @type {string}
      */
-    this.enableKey = options.enableKey;
+    this.enableKey = settings.enableKey;
+
+    /**
+     * The minimum number of inputs that must be active for a Swivel to be
+     * recognized.
+     *
+     * @private
+     * @type {number}
+     */
+    this.minInputs = settings.minInputs;
 
     /**
      * If this is set, the swivel will use the center of the element as its
@@ -2036,7 +2114,7 @@ class Swivel extends Gesture {
      * @private
      * @type {Element}
      */
-    this.pivotCenter = options.pivotCenter;
+    this.pivotCenter = settings.pivotCenter;
 
     /**
      * The pivot point of the swivel.
@@ -2093,6 +2171,7 @@ class Swivel extends Gesture {
       this.pivot = state.centroid;
       this.previous = 0;
     }
+    super.restart();
   }
 
   /**
@@ -2103,7 +2182,7 @@ class Swivel extends Gesture {
    * @param {State} state - current input state.
    */
   refresh(inputs, state) {
-    if (inputs.length === REQUIRED_INPUTS && this.enabled(state.event)) {
+    if (inputs.length >= this.minInputs && this.enabled(state.event)) {
       this.restart(state);
     }
   }
@@ -2127,10 +2206,9 @@ class Swivel extends Gesture {
    * @return {?Returns.SwivelData} Data to emit.
    */
   calculateOutput(state) {
-    const point = state.centroid;
     const pivot = this.pivot;
-    const angle = pivot.angleTo(point);
-    const delta = angle - this.previous;
+    const angle = pivot.angleTo(state.centroid);
+    const rotation = angularMinus(angle, this.previous);
 
     /*
      * Updating the previous angle regardless of emit prevents sudden flips when
@@ -2138,8 +2216,8 @@ class Swivel extends Gesture {
      */
     this.previous = angle;
 
-    if (pivot.distanceTo(point) > this.deadzoneRadius) {
-      return { delta, pivot, point };
+    if (pivot.distanceTo(state.centroid) > this.deadzoneRadius) {
+      return { rotation, pivot };
     }
     return null;
   }
@@ -2152,22 +2230,22 @@ class Swivel extends Gesture {
    * recognized.
    */
   move(state) {
-    if (state.active.length !== REQUIRED_INPUTS) return null;
+    if (state.active.length < this.minInputs) return null;
 
-    let output = null;
     if (this.enabled(state.event)) {
       if (this.isActive) {
-        output = this.calculateOutput(state);
-      } else {
-        // The enableKey was just pressed again.
-        this.refresh(state.active, state);
+        const output = this.calculateOutput(state);
+        return output ? this.emit(output, 'rotation') : null;
       }
+
+      // The enableKey was just pressed again.
+      this.refresh(state.active, state);
     } else {
       // The enableKey was released, therefore pivot point is now invalid.
       this.isActive = false;
     }
 
-    return output;
+    return null;
   }
 
   /**
@@ -2191,10 +2269,21 @@ class Swivel extends Gesture {
   }
 }
 
+/**
+ * The default options for a Swivel gesture.
+ */
+Swivel.DEFAULTS = Object.freeze({
+  deadzoneRadius: 15,
+  enableKey:      null,
+  minInputs:      1,
+  pivotCenter:    false,
+});
+
+
 module.exports = Swivel;
 
 
-},{"westures-core":2}],16:[function(require,module,exports){
+},{"./angularMinus.js":19,"westures-core":2}],17:[function(require,module,exports){
 /*
  * Contains the Tap class.
  */
@@ -2316,16 +2405,16 @@ class Tap extends Gesture {
       return null;
     }
 
-    const result = Point2D.midpoint(this.ended.map(i => i.current.point));
+    const centroid = Point2D.centroid(this.ended.map(i => i.current.point));
     this.ended = [];
-    return result;
+    return { centroid, ...centroid };
   }
 }
 
 module.exports = Tap;
 
 
-},{"westures-core":2}],17:[function(require,module,exports){
+},{"westures-core":2}],18:[function(require,module,exports){
 /*
  * Contains the Track class.
  */
@@ -2423,5 +2512,36 @@ class Track extends Gesture {
 module.exports = Track;
 
 
-},{"westures-core":2}]},{},[1])(1)
+},{"westures-core":2}],19:[function(require,module,exports){
+/*
+ * Constains the angularMinus() function
+ */
+
+'use strict';
+
+const PI2 = 2 * Math.PI;
+
+/**
+ * Helper function to regulate angular differences, so they don't jump from 0 to
+ * 2*PI or vice versa.
+ *
+ * @private
+ * @param {number} a - Angle in radians.
+ * @param {number} b - Angle in radians.
+ * @return {number} c, given by: c = a - b such that || < PI
+ */
+function angularMinus(a, b = 0) {
+  let diff = a - b;
+  if (diff < -Math.PI) {
+    diff += PI2;
+  } else if (diff > Math.PI) {
+    diff -= PI2;
+  }
+  return diff;
+}
+
+module.exports = angularMinus;
+
+
+},{}]},{},[1])(1)
 });
