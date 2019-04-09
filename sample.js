@@ -8,6 +8,23 @@ const FRICTION = 0.95;
 const MULTI = 7;
 const LIMIT = 0.1;
 const MAX_V = 7;
+const PALETTE = [
+  // Pastel Rainbow
+  '#ff9299',
+  '#ffa77a',
+  '#fff783',
+  '#a9ee99',
+  '#a1ccff',
+  '#ff91d7',
+
+  // Green Plants
+  // https://www.color-hex.com/color-palette/76297
+  '#45ee48',
+  '#2db83d',
+  '#85ff7a',
+  '#d4ffb2',
+  '#4cd038',
+];
 
 function random8Bit() {
   return Math.floor(Math.random() * 256);
@@ -139,33 +156,33 @@ class Interactable {
 }
 
 // Basic gestures
-new Interactable('TAP',    'crimson').addTap();
-new Interactable('SWIVEL', 'darkorange').addSwivel();
-new Interactable('PAN',    'gold').addPan();
-new Interactable('PINCH',  'green').addPinch();
-new Interactable('ROTATE', 'dodgerblue').addRotate();
-new Interactable('SWIPE',  'darkorchid').addSwipe();
+new Interactable('TAP',    PALETTE[0]).addTap();
+new Interactable('SWIVEL', PALETTE[1]).addSwivel();
+new Interactable('PAN',    PALETTE[2]).addPan({ smoothing: false });
+new Interactable('PINCH',  PALETTE[3]).addPinch();
+new Interactable('ROTATE', PALETTE[4]).addRotate();
+new Interactable('SWIPE',  PALETTE[5]).addSwipe();
 
 // Mix and match!
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
-  'olivedrab'
+  PALETTE[6]
 ).addTap()
   .addPan({ muteKey: 'ctrlKey' })
   .addPinch()
   .addRotate()
   .addSwipe()
   .addSwivel({ enableKey: 'ctrlKey' });
-new Interactable('SLOW TAP',      'yellowgreen').addTap({ 
-  minDelay: 300,
-  maxDelay: 1000,
-});
-new Interactable('DOUBLE TAP',    'limegreen').addTap({ 
+new Interactable('DOUBLE TAP', PALETTE[7]).addTap({ 
   numInputs: 2 
 });
-new Interactable('FIVE TAP',      'greenyellow').addTap({ 
+new Interactable('FIVE TAP', PALETTE[8]).addTap({ 
   maxDelay: 1000,
   numInputs: 5.
+});
+new Interactable('SLOW TAP', PALETTE[9]).addTap({ 
+  minDelay: 300,
+  maxDelay: 1000,
 });
 
