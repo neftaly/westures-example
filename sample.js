@@ -1,6 +1,6 @@
 'use strict';
 
-const region = new westures.Region(window);
+const region = new westures.Region(document.body);
 const container = document.querySelector('#container');
 
 const SIXTY_FPS = 1000 / 60;
