@@ -8,23 +8,6 @@ const FRICTION = 0.95;
 const MULTI = 7;
 const LIMIT = 0.1;
 const MAX_V = 7;
-const PALETTE = [
-  // Pastel Rainbow
-  '#ff9299',
-  '#ffa77a',
-  '#fff783',
-  '#a9ee99',
-  '#a1ccff',
-  '#ff91d7',
-
-  // Green Plants
-  // https://www.color-hex.com/color-palette/76297
-  '#45ee48',
-  '#2db83d',
-  '#85ff7a',
-  '#d4ffb2',
-  '#4cd038',
-];
 
 function random8Bit() {
   return Math.floor(Math.random() * 256);
@@ -99,6 +82,13 @@ class Interactable {
     return this;
   }
 
+  addPress(options) {
+    region.addGesture(this.element, new westures.Press((data) => {
+      this.randomBackground();
+    }, options));
+    return this;
+  }
+
   addRotate(options) {
     region.addGesture(this.element, new westures.Rotate(options), (data) => {
       this.rotation += data.rotation;
@@ -155,6 +145,18 @@ class Interactable {
   }
 }
 
+/* ========================================================================== */
+
+const NUM_COLOURS = 11;
+const INTERVAL = Math.floor(360 / NUM_COLOURS);
+const PALETTE = [];
+
+// Generate a Pastel Rainbow
+for (let i = 0; i < NUM_COLOURS; i++) {
+  const hue = INTERVAL * i;
+  PALETTE.push(`hsl(${hue}, 100%, 75%)`);
+}
+
 // Basic gestures
 new Interactable('TAP',    PALETTE[0]).addTap();
 new Interactable('SWIVEL', PALETTE[1]).addSwivel();
@@ -162,26 +164,27 @@ new Interactable('PAN',    PALETTE[2]).addPan({ smoothing: false });
 new Interactable('PINCH',  PALETTE[3]).addPinch();
 new Interactable('ROTATE', PALETTE[4]).addRotate();
 new Interactable('SWIPE',  PALETTE[5]).addSwipe();
+new Interactable('PRESS',  PALETTE[6]).addPress();
 
 // Mix and match!
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
-  PALETTE[6]
+  PALETTE[7]
 ).addTap()
   .addPan({ muteKey: 'ctrlKey' })
   .addPinch()
   .addRotate()
   .addSwipe()
   .addSwivel({ enableKey: 'ctrlKey' });
-new Interactable('DOUBLE TAP', PALETTE[7]).addTap({ 
+new Interactable('DOUBLE TAP', PALETTE[8]).addTap({ 
   numInputs: 2 
 });
-new Interactable('FIVE TAP', PALETTE[8]).addTap({ 
+new Interactable('FIVE TAPS', PALETTE[9]).addTap({ 
   maxDelay: 1000,
   numInputs: 5.
 });
-new Interactable('SLOW TAP', PALETTE[9]).addTap({ 
+new Interactable('SLOW TAP', PALETTE[10]).addTap({ 
   minDelay: 300,
   maxDelay: 1000,
 });
