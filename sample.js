@@ -157,14 +157,19 @@ for (let i = 0; i < NUM_COLOURS; i++) {
   PALETTE.push(`hsl(${hue}, 100%, 75%)`);
 }
 
+let cidx = 0;
+function nextColour() {
+  return PALETTE[cidx++];
+}
+
 // Basic gestures
-new Interactable('TAP',    PALETTE[0]).addTap();
-new Interactable('SWIVEL', PALETTE[1]).addSwivel();
-new Interactable('PAN',    PALETTE[2]).addPan({ smoothing: false });
-new Interactable('PINCH',  PALETTE[3]).addPinch();
-new Interactable('ROTATE', PALETTE[4]).addRotate();
-new Interactable('SWIPE',  PALETTE[5]).addSwipe();
-new Interactable('PRESS',  PALETTE[6]).addPress();
+new Interactable('TAP',    nextColour()).addTap();
+new Interactable('SWIVEL', nextColour()).addSwivel();
+new Interactable('PAN',    nextColour()).addPan({ smoothing: false });
+new Interactable('PINCH',  nextColour()).addPinch();
+new Interactable('ROTATE', nextColour()).addRotate();
+new Interactable('SWIPE',  nextColour()).addSwipe();
+new Interactable('PRESS',  nextColour()).addPress();
 
 // Mix and match!
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
@@ -177,14 +182,14 @@ new Interactable(
   .addRotate()
   .addSwipe()
   .addSwivel({ enableKey: 'ctrlKey' });
-new Interactable('DOUBLE TAP', PALETTE[8]).addTap({ 
+new Interactable('DOUBLE TAP', nextColour()).addTap({ 
   numInputs: 2 
 });
-new Interactable('FIVE TAPS', PALETTE[9]).addTap({ 
+new Interactable('FIVE TAPS', nextColour()).addTap({ 
   maxDelay: 1000,
   numInputs: 5.
 });
-new Interactable('SLOW TAP', PALETTE[10]).addTap({ 
+new Interactable('SLOW TAP', nextColour()).addTap({ 
   minDelay: 300,
   maxDelay: 1000,
 });
