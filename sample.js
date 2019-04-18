@@ -175,7 +175,7 @@ new Interactable('PRESS',  nextColour()).addPress();
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
-  PALETTE[7]
+  nextColour()
 ).addTap()
   .addPan({ muteKey: 'ctrlKey' })
   .addPinch()
