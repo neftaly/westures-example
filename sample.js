@@ -165,7 +165,7 @@ function nextColour() {
 // Basic gestures
 new Interactable('TAP',    nextColour()).addTap();
 new Interactable('SWIVEL', nextColour()).addSwivel();
-new Interactable('PAN',    nextColour()).addPan({ smoothing: false });
+new Interactable('PAN',    nextColour()).addPan();
 new Interactable('PINCH',  nextColour()).addPinch();
 new Interactable('ROTATE', nextColour()).addRotate();
 new Interactable('SWIPE',  nextColour()).addSwipe();
