@@ -1,16 +1,35 @@
 {
-  "name": "sample",
+  "name": "westures-example",
   "version": "1.0.0",
   "description": "sample",
   "main": "sample.js",
   "scripts": {
+    "build": "parcel build sample.js",
     "start": "npx http-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Michael van der Kamp <michael.vanderkamp@usask.ca>",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.16.4",
-    "http-server": "^0.11.1"
-  }
+    "http-server": "^0.11.1",
+    "westures": "^0.7.4"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.12.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mvanderkamp/westures-example.git"
+  },
+  "keywords": [
+    "westures",
+    "example",
+    "gesture",
+    "library",
+    "multitouch"
+  ],
+  "bugs": {
+    "url": "https://github.com/mvanderkamp/westures-example/issues"
+  },
+  "homepage": "https://github.com/mvanderkamp/westures-example#readme"
 }

@@ -1,5 +1,6 @@
 'use strict';
 
+const westures = require('westures');
 const region = new westures.Region(document.body);
 const container = document.querySelector('#container');
 
