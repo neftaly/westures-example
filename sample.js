@@ -148,7 +148,7 @@ class Interactable {
 
 /* ========================================================================== */
 
-const NUM_COLOURS = 11;
+const NUM_COLOURS = 12;
 const INTERVAL = Math.floor(360 / NUM_COLOURS);
 const PALETTE = [];
 
@@ -194,4 +194,9 @@ new Interactable('SLOW TAP', nextColour()).addTap({
   minDelay: 300,
   maxDelay: 1000,
 });
+new Interactable('MULTI PRESS', nextColour()).addPress()
+  .addPress({ minInputs: 2 })
+  .addPress({ minInputs: 3 })
+  .addPress({ minInputs: 4 })
+  .addPress({ minInputs: 5 });
 
