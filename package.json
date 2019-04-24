@@ -4,7 +4,7 @@
   "description": "sample",
   "main": "sample.js",
   "scripts": {
-    "build": "parcel build sample.js",
+    "build": "parcel build sample.js --public-url /dist/",
     "start": "npx http-server",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
