@@ -39,18 +39,8 @@ class Interactable {
 
     this.animate = false;
     this.update_fn = this.update.bind(this);
-    this.update_interval = null;
     this.swipe_interval = null;
-    this.animate_swipe = () => {
-      this.x += this.velocityX;
-      this.y += this.velocityY;
-      this.velocityX = reduce(this.velocityX);
-      this.velocityY = reduce(this.velocityY);
-      if (this.velocityY === 0 && this.velocityX === 0) {
-        clearInterval(this.swipe_interval);
-      }
-      window.requestAnimationFrame(this.update_fn);
-    };
+    this.swipe_fn = this.swipeAnimation.bind(this);
 
     this.setupTracking();
   }
@@ -117,7 +107,7 @@ class Interactable {
         const velocity = data.velocity > MAX_V ? MAX_V : data.velocity;
         this.velocityX = velocity * Math.cos(data.direction) * MULTI;
         this.velocityY = velocity * Math.sin(data.direction) * MULTI;
-        this.swipe_interval = setInterval(this.animate_swipe, SIXTY_FPS); 
+        this.swipe_interval = setInterval(this.swipe_fn, SIXTY_FPS); 
       });
     return this;
   }
@@ -150,6 +140,17 @@ class Interactable {
     if (this.animate) {
       window.requestAnimationFrame(this.update_fn);
     }
+  }
+
+  swipeAnimation() {
+    this.x += this.velocityX;
+    this.y += this.velocityY;
+    this.velocityX = reduce(this.velocityX);
+    this.velocityY = reduce(this.velocityY);
+    if (this.velocityY === 0 && this.velocityX === 0) {
+      clearInterval(this.swipe_interval);
+    }
+    window.requestAnimationFrame(this.update_fn);
   }
 }
 
