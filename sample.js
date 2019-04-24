@@ -37,6 +37,8 @@ class Interactable {
     this.velocityX = 0;
     this.velocityY = 0;
 
+    this.animate = false;
+    this.update_fn = this.update.bind(this);
     this.update_interval = null;
     this.swipe_interval = null;
     this.animate_swipe = () => {
@@ -47,7 +49,7 @@ class Interactable {
       if (this.velocityY === 0 && this.velocityX === 0) {
         clearInterval(this.swipe_interval);
       }
-      this.update();
+      window.requestAnimationFrame(this.update_fn);
     };
 
     this.setupTracking();
@@ -59,11 +61,12 @@ class Interactable {
       (data) => {
         switch (data.phase) {
           case 'start':
-            this.update_interval = setInterval(() => this.update(), SIXTY_FPS);
+            this.animate = true;
+            window.requestAnimationFrame(this.update_fn);
             clearInterval(this.swipe_interval);
             break;
           case 'end':
-            setTimeout(() => clearInterval(this.update_interval), 0);
+            this.animate = false;
             break;
         }
       });
@@ -139,12 +142,14 @@ class Interactable {
   }
 
   update() {
-    window.requestAnimationFrame(() => {
-      const rotate = `rotate(${this.rotation}rad) `;
-      const translate = `translate(${this.x}px, ${this.y}px) `;
-      const scale = `scale(${this.scale}) `;
-      this.element.style.transform = translate + rotate + scale;
-    });
+    const rotate = `rotate(${this.rotation}rad) `;
+    const translate = `translate(${this.x}px, ${this.y}px) `;
+    const scale = `scale(${this.scale}) `;
+    this.element.style.transform = translate + rotate + scale;
+
+    if (this.animate) {
+      window.requestAnimationFrame(this.update_fn);
+    }
   }
 }
 
