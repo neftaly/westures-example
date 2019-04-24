@@ -139,10 +139,12 @@ class Interactable {
   }
 
   update() {
-    const rotate = `rotate(${this.rotation}rad) `;
-    const translate = `translate(${this.x}px, ${this.y}px) `;
-    const scale = `scale(${this.scale}) `;
-    this.element.style.transform = translate + rotate + scale;
+    window.requestAnimationFrame(() => {
+      const rotate = `rotate(${this.rotation}rad) `;
+      const translate = `translate(${this.x}px, ${this.y}px) `;
+      const scale = `scale(${this.scale}) `;
+      this.element.style.transform = translate + rotate + scale;
+    });
   }
 }
 
