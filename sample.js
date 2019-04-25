@@ -56,7 +56,9 @@ class Interactable {
             clearInterval(this.swipe_interval);
             break;
           case 'end':
-            this.animate = false;
+            if (data.active.length == 0) {
+              this.animate = false;
+            }
             break;
         }
       });
