@@ -94,7 +94,7 @@ class Interactable {
 
   addPan(options) {
     region.addGesture(this.element,
-      new westures.Pan(options), 
+      new westures.Pan(options),
       (data) => {
         this.x += data.translation.x;
         this.y += data.translation.y;
@@ -109,17 +109,17 @@ class Interactable {
         const velocity = data.velocity > MAX_V ? MAX_V : data.velocity;
         this.velocityX = velocity * Math.cos(data.direction) * MULTI;
         this.velocityY = velocity * Math.sin(data.direction) * MULTI;
-        this.swipe_interval = setInterval(this.swipe_fn, SIXTY_FPS); 
+        this.swipe_interval = setInterval(this.swipe_fn, SIXTY_FPS);
       });
     return this;
   }
 
   addSwivel(options) {
-    region.addGesture(this.element, 
+    region.addGesture(this.element,
       new westures.Swivel({
         pivotCenter: this.element,
         ...options,
-      }), 
+      }),
       (data) => {
         this.rotation += data.rotation;
       });
@@ -130,6 +130,18 @@ class Interactable {
     region.addGesture(this.element, new westures.Pinch(options), (data) => {
       this.scale *= data.scale;
     });
+    return this;
+  }
+
+  addPull(options) {
+    region.addGesture(this.element,
+      new westures.Pull({
+        pivotCenter: this.element,
+        ...options,
+      }),
+      (data) => {
+        this.scale *= data.scale;
+      });
     return this;
   }
 
@@ -158,7 +170,7 @@ class Interactable {
 
 /* ========================================================================== */
 
-const NUM_COLOURS = 12;
+const NUM_COLOURS = 13;
 const INTERVAL = Math.floor(360 / NUM_COLOURS);
 const PALETTE = [];
 
@@ -175,32 +187,34 @@ function nextColour() {
 
 // Basic gestures
 new Interactable('TAP',    nextColour()).addTap();
-new Interactable('SWIVEL', nextColour()).addSwivel();
 new Interactable('PAN',    nextColour()).addPan();
 new Interactable('PINCH',  nextColour()).addPinch();
 new Interactable('ROTATE', nextColour()).addRotate();
 new Interactable('SWIPE',  nextColour()).addSwipe();
 new Interactable('PRESS',  nextColour()).addPress();
+new Interactable('SWIVEL', nextColour()).addSwivel();
+new Interactable('PULL',   nextColour()).addPull();
 
 // Mix and match!
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
-  'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL)', 
+  'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL and PULL)',
   nextColour()
 ).addTap()
   .addPan({ muteKey: 'ctrlKey' })
   .addPinch()
   .addRotate()
   .addSwipe()
-  .addSwivel({ enableKey: 'ctrlKey' });
-new Interactable('DOUBLE TAP', nextColour()).addTap({ 
-  numInputs: 2 
+  .addSwivel({ enableKey: 'ctrlKey' })
+  .addPull({ enableKey: 'ctrlKey' });
+new Interactable('DOUBLE TAP', nextColour()).addTap({
+  numInputs: 2
 });
-new Interactable('FIVE TAPS', nextColour()).addTap({ 
+new Interactable('FIVE TAPS', nextColour()).addTap({
   maxDelay: 1000,
   numInputs: 5.
 });
-new Interactable('SLOW TAP', nextColour()).addTap({ 
+new Interactable('SLOW TAP', nextColour()).addTap({
   minDelay: 300,
   maxDelay: 1000,
 });
