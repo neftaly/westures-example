@@ -16,8 +16,8 @@
     "westures": "^0.7.8"
   },
   "devDependencies": {
-    "eslint": "^6.5.1",
-    "parcel-bundler": "^1.12.3"
+    "eslint": "^6.7.0",
+    "parcel-bundler": "^1.12.4"
   },
   "repository": {
     "type": "git",
