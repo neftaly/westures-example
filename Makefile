@@ -12,7 +12,7 @@ fix:
 	npx eslint sample.js --fix;
 
 parcel:
-	npx parcel build 'sample.js' --public-url ./;
+	npx parcel build 'sample.js' --public-url ./
 
 tags:
 	ctags -R sample.js;
