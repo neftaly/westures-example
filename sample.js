@@ -19,6 +19,9 @@ function reduce(value) {
   return (Math.abs(value) < LIMIT) ? 0 : value;
 }
 
+/**
+ * Provides an interactable element using westures.
+ */
 class Interactable {
   constructor(name, color) {
     this.element = document.createElement('div');
@@ -45,23 +48,32 @@ class Interactable {
     this.setupTracking();
   }
 
+  /**
+   * Setups up tracking of the interactable element.
+   */
   setupTracking() {
-    region.addGesture(this.element,
-      new westures.Track(['start', 'end']),
+    region.addGesture(new westures.Track(
+      this.element,
       (data) => {
         switch (data.phase) {
-          case 'start':
-            this.animate = true;
-            window.requestAnimationFrame(this.update_fn);
-            clearInterval(this.swipe_interval);
-            break;
-          case 'end':
-            if (data.active.length == 0) {
-              this.animate = false;
-            }
-            break;
+        case 'start':
+          this.animate = true;
+          window.requestAnimationFrame(this.update_fn);
+          clearInterval(this.swipe_interval);
+          break;
+        case 'end':
+          if (data.active.length == 0) {
+            this.animate = false;
+          }
+          break;
+        default:
+          break;
         }
-      });
+      },
+      {
+        phases: ['start', 'end'],
+      }
+    ));
   }
 
   randomBackground() {
@@ -72,76 +84,100 @@ class Interactable {
   }
 
   addTap(options) {
-    region.addGesture(this.element, new westures.Tap(options), (data) => {
-      this.randomBackground();
-    });
+    region.addGesture(new westures.Tap(
+      this.element,
+      () => {
+        this.randomBackground();
+      },
+      options
+    ));
     return this;
   }
 
   addPress(options) {
-    region.addGesture(this.element, new westures.Press((data) => {
-      this.randomBackground();
-    }, options));
+    region.addGesture(new westures.Press(
+      this.element,
+      () => {
+        this.randomBackground();
+      },
+      options
+    ));
     return this;
   }
 
   addRotate(options) {
-    region.addGesture(this.element, new westures.Rotate(options), (data) => {
-      this.rotation += data.rotation;
-    });
+    region.addGesture(new westures.Rotate(
+      this.element,
+      (data) => {
+        this.rotation += data.rotation;
+      },
+      options
+    ));
     return this;
   }
 
   addPan(options) {
-    region.addGesture(this.element,
-      new westures.Pan(options),
+    region.addGesture(new westures.Pan(
+      this.element,
       (data) => {
         this.x += data.translation.x;
         this.y += data.translation.y;
-      });
+      },
+      options
+    ));
     return this;
   }
 
   addSwipe(options) {
-    region.addGesture(this.element,
-      new westures.Swipe(options),
+    region.addGesture(new westures.Swipe(
+      this.element,
       (data) => {
         const velocity = data.velocity > MAX_V ? MAX_V : data.velocity;
         this.velocityX = velocity * Math.cos(data.direction) * MULTI;
         this.velocityY = velocity * Math.sin(data.direction) * MULTI;
         this.swipe_interval = setInterval(this.swipe_fn, SIXTY_FPS);
-      });
+      },
+      options
+    ));
     return this;
   }
 
   addSwivel(options) {
-    region.addGesture(this.element,
-      new westures.Swivel({
-        pivotCenter: this.element,
-        ...options,
-      }),
+    region.addGesture(new westures.Swivel(
+      this.element,
       (data) => {
         this.rotation += data.rotation;
-      });
+      },
+      {
+        pivotCenter: this.element,
+        ...options,
+      }
+    ));
     return this;
   }
 
   addPinch(options) {
-    region.addGesture(this.element, new westures.Pinch(options), (data) => {
-      this.scale *= data.scale;
-    });
+    region.addGesture(new westures.Pinch(
+      this.element,
+      (data) => {
+        this.scale *= data.scale;
+      },
+      options
+    ));
     return this;
   }
 
   addPull(options) {
-    region.addGesture(this.element,
-      new westures.Pull({
-        pivotCenter: this.element,
-        ...options,
-      }),
+    region.addGesture(new westures.Pull(
+      this.element,
       (data) => {
         this.scale *= data.scale;
-      });
+      },
+      {
+        pivotCenter: this.element,
+        ...options,
+      }
+    ));
     return this;
   }
 
@@ -170,7 +206,7 @@ class Interactable {
 
 /* ========================================================================== */
 
-const NUM_COLOURS = 13;
+const NUM_COLOURS = 12;
 const INTERVAL = Math.floor(360 / NUM_COLOURS);
 const PALETTE = [];
 
@@ -201,26 +237,20 @@ new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL and PULL)',
   nextColour()
 ).addTap()
-  .addPan({ muteKey: 'ctrlKey' })
+  .addPan({ disableKeys: ['ctrlKey'] })
   .addPinch()
   .addRotate()
   .addSwipe()
-  .addSwivel({ enableKey: 'ctrlKey' })
-  .addPull({ enableKey: 'ctrlKey' });
+  .addSwivel({ enableKeys: ['ctrlKey'] })
+  .addPull({ enableKeys: ['ctrlKey'] });
 new Interactable('DOUBLE TAP', nextColour()).addTap({
-  numInputs: 2
+  numTaps: 2,
 });
 new Interactable('FIVE TAPS', nextColour()).addTap({
   maxDelay: 1000,
-  numInputs: 5.
+  numTaps:  5,
 });
 new Interactable('SLOW TAP', nextColour()).addTap({
   minDelay: 300,
   maxDelay: 1000,
 });
-new Interactable('MULTI PRESS', nextColour()).addPress()
-  .addPress({ minInputs: 2 })
-  .addPress({ minInputs: 3 })
-  .addPress({ minInputs: 4 })
-  .addPress({ minInputs: 5 });
-
