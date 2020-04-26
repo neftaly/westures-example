@@ -1,23 +1,35 @@
 {
   "name": "westures-example",
   "version": "1.0.0",
-  "description": "sample",
-  "main": "sample.js",
-  "scripts": {
-    "build": "parcel build sample.js --public-url ./",
-    "start": "npx http-server",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "description": "Simple static example page of the Westures library in action",
   "author": "Michael van der Kamp <michael.vanderkamp@usask.ca>",
   "license": "ISC",
+  "main": "dist/sample.js",
+  "targets": {
+    "main": {
+      "context": "browser",
+      "includeNodeModules": true,
+      "isLibrary": false,
+      "outputFormat": "global",
+      "publicUrl": "./",
+      "sourceMap": true
+    }
+  },
+  "browserslist": [
+    "> 0.2%",
+    "not dead"
+  ],
+  "scripts": {
+    "build": "parcel build sample.js",
+    "start": "npx http-server"
+  },
   "dependencies": {
-    "browserify": "^16.5.1",
-    "http-server": "^0.12.1",
-    "parcel-bundler": "^1.12.4",
     "westures": "^1.0.0-alpha.2"
   },
   "devDependencies": {
-    "eslint": "^6.8.0"
+    "eslint": "^6.8.0",
+    "http-server": "^0.12.1",
+    "parcel": "^2.0.0-alpha.3.2"
   },
   "repository": {
     "type": "git",

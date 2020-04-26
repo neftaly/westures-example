@@ -2,5 +2,6 @@ node_modules/
 retry.sh
 .*.sw[op]
 .cache
+.parcel-cache
 tags
 
