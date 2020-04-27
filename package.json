@@ -21,6 +21,7 @@
   ],
   "scripts": {
     "build": "parcel build sample.js",
+    "postinstall": "rm -rf ./.parcel-cache && node ./postinstall.js",
     "start": "npx http-server"
   },
   "dependencies": {

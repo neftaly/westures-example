@@ -72,7 +72,7 @@ class Interactable {
       },
       {
         phases: ['start', 'end'],
-      }
+      },
     ));
   }
 
@@ -89,7 +89,7 @@ class Interactable {
       () => {
         this.randomBackground();
       },
-      options
+      options,
     ));
     return this;
   }
@@ -100,7 +100,7 @@ class Interactable {
       () => {
         this.randomBackground();
       },
-      options
+      options,
     ));
     return this;
   }
@@ -111,7 +111,7 @@ class Interactable {
       (data) => {
         this.rotation += data.rotation;
       },
-      options
+      options,
     ));
     return this;
   }
@@ -123,7 +123,7 @@ class Interactable {
         this.x += data.translation.x;
         this.y += data.translation.y;
       },
-      options
+      options,
     ));
     return this;
   }
@@ -137,7 +137,7 @@ class Interactable {
         this.velocityY = velocity * Math.sin(data.direction) * MULTI;
         this.swipe_interval = setInterval(this.swipe_fn, SIXTY_FPS);
       },
-      options
+      options,
     ));
     return this;
   }
@@ -151,7 +151,7 @@ class Interactable {
       {
         pivotCenter: this.element,
         ...options,
-      }
+      },
     ));
     return this;
   }
@@ -162,7 +162,7 @@ class Interactable {
       (data) => {
         this.scale *= data.scale;
       },
-      options
+      options,
     ));
     return this;
   }
@@ -176,7 +176,7 @@ class Interactable {
       {
         pivotCenter: this.element,
         ...options,
-      }
+      },
     ));
     return this;
   }
@@ -235,7 +235,7 @@ new Interactable('PULL',   nextColour()).addPull();
 // new Interactable('ROTATE and SWIVEL', 'forestgreen').addRotate().addSwivel();
 new Interactable(
   'TAP, PAN, PINCH, SWIPE, and ROTATE\n(desktop: CTRL to SWIVEL and PULL)',
-  nextColour()
+  nextColour(),
 ).addTap()
   .addPan({ disableKeys: ['ctrlKey'] })
   .addPinch()
