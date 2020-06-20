@@ -1,7 +1,7 @@
 'use strict';
 
 const westures = require('westures');
-const region = new westures.Region(document.body);
+const region = new westures.Region();
 const container = document.querySelector('#container');
 
 const SIXTY_FPS = 1000 / 60;
@@ -52,27 +52,22 @@ class Interactable {
    * Setups up tracking of the interactable element.
    */
   setupTracking() {
-    region.addGesture(new westures.Track(
-      this.element,
-      (data) => {
-        switch (data.phase) {
-        case 'start':
-          this.animate = true;
-          window.requestAnimationFrame(this.update_fn);
-          clearInterval(this.swipe_interval);
-          break;
-        case 'end':
-          if (data.active.length == 0) {
-            this.animate = false;
-          }
-          break;
-        default:
-          break;
+    const fns = {
+      end:   (data) => {
+        if (data.active.length == 0) {
+          this.animate = false;
         }
       },
-      {
-        phases: ['start', 'end'],
+      start: () => {
+        this.animate = true;
+        window.requestAnimationFrame(this.update_fn);
+        clearInterval(this.swipe_interval);
       },
+    };
+    region.addGesture(new westures.Track(
+      this.element,
+      (data) => fns[data.phase](data),
+      { phases: Object.keys(fns) },
     ));
   }
 
